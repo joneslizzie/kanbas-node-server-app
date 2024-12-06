@@ -1,15 +1,26 @@
 import * as enrollmentsDao from "./dao.js";
+import * as dao from "./dao.js";
+import * as courseDao from "../Courses/dao.js";
+
 export default function EnrollmentRoutes(app) {
- app.delete("/api/enrollments/:assignments", async (req, res) => {
-   const { assignmentId } = req.params;
-   const status = await enrollmentsDao.unenrollUserInCourse(assignmentId);
-   res.send(status);
- });
- app.put("/api/assignments/:assignments", async (req, res) => {
-    const { assignmentId } = req.params;
-    const assignmentUpdates = req.body;
-    const status = await enrollmentsDao.enrollUserInCourse(assignmentId, assignmentUpdates);
-    res.send(status);
-  });
+  const findCoursesForUser = async (req, res) => {
+    const currentUser = req.session["currentUser"];
+    if (!currentUser) {
+      res.sendStatus(401);
+      return;
+    }
+    if (currentUser.role === "ADMIN") {
+      const courses = await courseDao.findAllCourses();
+      res.json(courses);
+      return;
+    }
+    let { uid } = req.params;
+    if (uid === "current") {
+      uid = currentUser._id;
+    }
+    const courses = await enrollmentsDao.findCoursesForUser(uid);
+    res.json(courses);
+  };
+  app.get("/api/users/:uid/courses", findCoursesForUser);
 
 }
